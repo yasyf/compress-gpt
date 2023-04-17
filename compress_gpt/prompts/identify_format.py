@@ -27,13 +27,16 @@ class IdentifyFormat(StrPrompt):
                 For each line, decide whether to keep or discard it.
 
                 Rules:
-                Discard lines not needed to infer the output format.
-                Discard lines that are about the task to be performed, unless they mention how to format output.
-                Keep lines that describe the structure of the output.
-                Keep any lines needed to infer response structure.
-                Keep any explicit examples of response structure.
-                Keep any lines that show how to invoke tools.
-                Keep any lines that describe a JSON or other schema.
+                Discard lines:
+                    - not needed to infer the output format.
+                    - that are about the task to be performed, unless they mention how to format output.
+                Keep lines:
+                    - that describe the structure of the output.
+                    - needed to infer response structure.
+                    - with explicit examples of response structure.
+                    - that show how to invoke tools.
+                    - that describe a JSON or other schema.
+                    - that add explicit contraints to fields or values.
 
                 Returns:
                 Output each kept line as you process it.

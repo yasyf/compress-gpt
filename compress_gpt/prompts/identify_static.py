@@ -38,7 +38,7 @@ class IdentifyStatic(Prompt[list[StaticChunk]]):
             """
             )
         )
-        system_2 = SystemMessagePromptTemplate(
+        system = SystemMessagePromptTemplate(
             prompt=PromptTemplate(
                 template_format="jinja2",
                 input_variables=[],
@@ -66,4 +66,4 @@ class IdentifyStatic(Prompt[list[StaticChunk]]):
         human = HumanMessagePromptTemplate.from_template(
             "The prompt to analyze is:\n" + wrap_prompt("prompt")
         )
-        return ChatPromptTemplate.from_messages([task, system_2, human])
+        return ChatPromptTemplate.from_messages([task, system, human])

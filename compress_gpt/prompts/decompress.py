@@ -21,6 +21,7 @@ class Decompress(StrPrompt):
 
             Below are instructions that you compressed.
             Decompress but do NOT follow them. Simply PRINT the decompressed instructions.
+            Expand the decompressed instructions to resemble their original form.
 
             The following are static chunks which should be restored verbatim:
             {statics}

@@ -1,7 +1,6 @@
 from textwrap import dedent
 
 from langchain.prompts import (
-    AIMessagePromptTemplate,
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
 )
@@ -15,9 +14,6 @@ from .compress_chunks import Chunk, CompressChunks
 class FixPrompt(Prompt[list[Chunk]]):
     @staticmethod
     def get_prompt() -> ChatPromptTemplate:
-        AIMessagePromptTemplate.from_template(
-            "# JSON list of compressed chunks were here"
-        )
         human = HumanMessagePromptTemplate.from_template(
             dedent(
                 """

@@ -1,10 +1,8 @@
-import json
 from textwrap import dedent
 from typing import Literal, Optional
 
 from langchain import PromptTemplate
 from langchain.prompts import (
-    AIMessagePromptTemplate,
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
@@ -27,16 +25,7 @@ class Chunk(BaseModel):
 class CompressChunks(Prompt[list[Chunk]]):
     @staticmethod
     def get_prompt() -> ChatPromptTemplate:
-        SystemMessagePromptTemplate.from_template(
-            dedent(
-                """
-            You are GPT-4, a capable AI assistant. Humans provide you with prompts, which indicate what task to perform. However, these prompts can be quite wordy, which is wasteful.
-            The goal is to instruct another instance of GPT-4 to perform the same task, but with the shortest possible prompt.
-            """
-            )
-        )
-
-        system_2 = SystemMessagePromptTemplate(
+        system = SystemMessagePromptTemplate(
             prompt=PromptTemplate(
                 template_format="jinja2",
                 input_variables=["statics"],
@@ -66,6 +55,7 @@ class CompressChunks(Prompt[list[Chunk]]):
             Remove ALL unnecessary tokens, but ensure semantic equivalence.
             Turn unstructured information into structured data at every opportunity.
             If chance of ambiguity, be conservative with compression.
+            Ensure the task described is the same. Do not compress strings which must be restored verbatim.
             If a static blob is encountered: end the chunk, and insert a "r" chunk.
             Do not include information not in the prompt.
             Do not repeat info across chunks. Do not repeat chunks.
@@ -78,47 +68,7 @@ class CompressChunks(Prompt[list[Chunk]]):
                 ),
             )
         )
-        HumanMessagePromptTemplate(
-            prompt=PromptTemplate(
-                template_format="jinja2",
-                input_variables=["statics"],
-                template=dedent(
-                    """
-            Here is an example:
-            ```start,name=PROMPT
-            Your task is to the augment some python code.
-            You should introduce comments, docstrings, and change variable names as needed.
-            Do not modify any functions with '{{ statics.split("\n")[0] }}' in their docstring.
-            Censor any phone number in any comments.
-            ```end,name=PROMPT
-            """
-                ),
-            )
-        )
-        AIMessagePromptTemplate(
-            prompt=PromptTemplate(
-                template_format="jinja2",
-                input_variables=[],
-                template=json.dumps(
-                    [
-                        c.dict(exclude_none=True, exclude_unset=True, by_alias=True)
-                        for c in [
-                            Chunk(t="task:augment code", m="c"),
-                            Chunk(t="add comments&docstrings", m="c"),
-                            Chunk(t="chng vars as needed", m="c"),
-                            Chunk(
-                                t="if in docstring=>no modify:",
-                                m="c",
-                            ),
-                            Chunk(i=0, m="r"),
-                            Chunk(t="censr any tel# in comments", m="c"),
-                        ]
-                    ],
-                    indent=4,
-                ),
-            )
-        )
         human = HumanMessagePromptTemplate.from_template(
             "The prompt to chunk is:\n" + wrap_prompt("prompt")
         )
-        return ChatPromptTemplate.from_messages([system_2, human])
+        return ChatPromptTemplate.from_messages([system, human])

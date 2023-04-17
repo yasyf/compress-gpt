@@ -37,35 +37,31 @@ def make_fast(model: ChatOpenAI) -> ChatOpenAI:
     )
 
 
-class NullCallbackHandler(BaseCallbackHandler):
+class CompressCallbackHandler(BaseCallbackHandler):
     def __init__(self):
         pass
 
     def on_llm_start(self, serialized, prompts, **kwargs):
-        print(
-            "[bold red]LLM START[/bold red]",
-            {**serialized, "prompts": prompts},
-            flush=True,
-        )
+        print(f"\n[bold green]{prompts[0].splitlines()[1]}[/bold green]\n", flush=True)
 
     def on_llm_end(self, response, **kwargs):
-        print("[bold red]LLM END[/bold red]", flush=True)
+        pass
 
     def on_llm_new_token(self, token, **kwargs):
         sys.stdout.write(token)
         sys.stdout.flush()
 
     def on_llm_error(self, error, **kwargs):
-        print("[bold red]LLM ERROR[/bold red]", error, flush=True)
+        print(f"[bold red]{error}[/bold red]\n", flush=True)
 
     def on_chain_start(self, serialized, inputs, **kwargs):
-        print("[bold red]CHAIN START[/bold red]", serialized, flush=True)
+        pass
 
     def on_chain_end(self, outputs, **kwargs):
-        print("[bold red]CHAIN END[/bold red]", flush=True)
+        pass
 
     def on_chain_error(self, error, **kwargs):
-        print("[bold red]CHAIN ERROR[/bold red]", error, flush=True)
+        pass
 
     def on_tool_start(self, serialized, input_str, **kwargs):
         pass

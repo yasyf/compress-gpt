@@ -9,8 +9,9 @@ from langchain.prompts import (
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
+from rich import print
 
-from compress_gpt import Compressor
+from compress_gpt import Compressor, clear_cache
 
 
 @pytest.fixture
@@ -47,7 +48,7 @@ def complex_prompt():
 
         Information about Yasyf:
         - His personal email is yasyf@gmail.com. This is the calendar to use for personal events.
-        - His phone number is 415-631-6744. Use this as the location for any phone calls.
+        - His phone number is 415-631-6744. Use this as the "location" for any phone calls.
         - He is an EIR at Root Ventures. Use this as the location for any meetings.
         - He is in San Francisco, California. Use PST for scheduling.
 
@@ -58,7 +59,6 @@ def complex_prompt():
         - Do not create an event if the time or date is ambiguous. Instead, ask for clarification.
 
         You have access to the following tools:
-
 
         Google Calendar: Find Event (Personal): A wrapper around Zapier NLA actions. The input to this tool is a natural language instruction, for example "get the latest email from my bank" or "send a slack message to the #general channel". Each tool will have params associated with it that are specified as a list. You MUST take into account the params when creating the instruction. For example, if the params are ['Message_Text', 'Channel'], your instruction should be something like 'send a slack message to the #general channel with the text hello world'. Another example: if the params are ['Calendar', 'Search_Term'], your instruction should be something like 'find the meeting in my personal calendar at 3pm'. Do not make up params, they will be explicitly specified in the tool description. If you do not have enough information to fill in the params, just say 'not enough information provided in the instruction, missing <param>'. If you get a none or null response, STOP EXECUTION, do not try to another tool!This tool specifically used for: Google Calendar: Find Event (Personal), and has params: ['Search_Term']
         Google Calendar: Create Detailed Event: A wrapper around Zapier NLA actions. The input to this tool is a natural language instruction, for example "get the latest email from my bank" or "send a slack message to the #general channel". Each tool will have params associated with it that are specified as a list. You MUST take into account the params when creating the instruction. For example, if the params are ['Message_Text', 'Channel'], your instruction should be something like 'send a slack message to the #general channel with the text hello world'. Another example: if the params are ['Calendar', 'Search_Term'], your instruction should be something like 'find the meeting in my personal calendar at 3pm'. Do not make up params, they will be explicitly specified in the tool description. If you do not have enough information to fill in the params, just say 'not enough information provided in the instruction, missing <param>'. If you get a none or null response, STOP EXECUTION, do not try to another tool!This tool specifically used for: Google Calendar: Create Detailed Event, and has params: ['Summary', 'Start_Date___Time', 'Description', 'Location', 'End_Date___Time', 'Attendees']
@@ -95,7 +95,6 @@ def complex_prompt():
         Thought: I now know the final answer
         Final Answer: the final answer to the original input question
 
-
         Begin! Reminder to always use the exact characters `Final Answer` when responding.
     """
     )
@@ -125,7 +124,7 @@ async def test_complex(complex_prompt: str, compressor: Compressor):
 
 
 async def test_prompt(prompt: ChatPromptTemplate):
-    model = ChatOpenAI(temperature=0, verbose=True)
+    model = ChatOpenAI(temperature=0, verbose=True, model_name="gpt-4")
     chain = LLMChain(llm=model, prompt=prompt)
     return (await chain.acall({"stop": "Observation:"}, return_only_outputs=True))[
         chain.output_key
@@ -134,6 +133,11 @@ async def test_prompt(prompt: ChatPromptTemplate):
 
 @pytest.mark.asyncio
 async def test_output(complex_prompt: str, compressor: Compressor):
+    await clear_cache()
+
+    print("[grey]Original Prompt[/grey]")
+    print(complex_prompt)
+
     messages = [
         HumanMessagePromptTemplate.from_template("Alice: Hey, how's it going?"),
         HumanMessagePromptTemplate.from_template("Yasyf: Good, how are you?"),
@@ -175,14 +179,16 @@ async def test_output(complex_prompt: str, compressor: Compressor):
         )
     )
 
-    print(complex_prompt)
-    print(resp1)
-
-    print(compressed)
-    print(resp2)
+    print("[white]Compressed Prompt[/white]")
 
     original = dirtyjson.loads(resp1, search_for_first_object=True)
     compressed = dirtyjson.loads(resp2, search_for_first_object=True)
+
+    print("[grey]Original Response[/grey]")
+    print(original)
+
+    print("[white]Compressed Response[/white]")
+    print(compressed)
 
     CORRECT = {
         "Google Calendar: Find Event (Personal)",

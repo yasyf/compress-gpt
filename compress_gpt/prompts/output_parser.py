@@ -33,6 +33,8 @@ class OutputParser(PydanticOutputParser, Generic[M]):
         )
         if isinstance(self.format, list) and text.startswith("{"):
             text = f"[{text}]"
+        if text.startswith("```"):
+            text = text.split("\n", 2)[-1].rsplit("\n", 2)[0]
         return text
 
     async def _fix(self, text: str, error: str) -> str:

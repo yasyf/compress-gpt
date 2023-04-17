@@ -30,7 +30,7 @@ class DiffPrompts(StrPrompt):
             - Conditions and constraints
 
             Generate a diff of the two prompts, by considering each of the above areas.
-            Be very specific in your diffing. You must diff every aspect of the two prompts.
+            Use SPECIFIC wording in your diff. You must diff every aspect of the two prompts.
         """
             )
         )

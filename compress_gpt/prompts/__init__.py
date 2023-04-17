@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Generic, Optional, Type, cast, get_args
 
 from langchain import LLMChain
-from langchain.callbacks import AimCallbackHandler
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import (
     ChatPromptTemplate,
@@ -34,18 +33,7 @@ class Prompt(ABC, Generic[M]):
     @classmethod
     async def run(cls, model: Optional[BaseLanguageModel] = None, **kwargs):
         chain = cls.get_chain(model=model)
-        try:
-            return cast(M, await chain.apredict_and_parse(**kwargs))
-        finally:
-            if aim := next(
-                (
-                    h
-                    for h in chain.llm.callback_manager.handlers
-                    if isinstance(h, AimCallbackHandler)
-                ),
-                None,
-            ):
-                aim.flush_tracker(langchain_asset=chain, reset=True, finish=False)
+        return cast(M, await chain.apredict_and_parse(**kwargs))
 
 
 class StrPrompt(Prompt[str]):

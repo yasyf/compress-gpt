@@ -2,12 +2,10 @@ import asyncio
 import itertools
 import re
 import traceback
-from functools import cached_property
 from typing import Optional
 
 import openai.error
 import tiktoken
-from langchain.callbacks import AimCallbackHandler
 from langchain.callbacks.base import CallbackManager
 from langchain.chat_models import ChatOpenAI
 from langchain.schema import OutputParserException
@@ -23,7 +21,7 @@ from compress_gpt.prompts.diff_prompts import DiffPrompts
 from compress_gpt.prompts.fix import FixPrompt
 from compress_gpt.prompts.identify_format import IdentifyFormat
 from compress_gpt.prompts.identify_static import IdentifyStatic, StaticChunk
-from compress_gpt.utils import NullCallbackHandler, make_fast
+from compress_gpt.utils import CompressCallbackHandler, make_fast
 
 CONTEXT_WINDOWS = {
     "gpt-3.5-turbo": 4097,
@@ -33,20 +31,12 @@ PROMPT_MAX_SIZE = 0.70
 
 
 class Compressor:
-    @cached_property
-    def aim_callback(self):
-        try:
-            return AimCallbackHandler(repo=".")
-        except ImportError:
-            return NullCallbackHandler()
-
     def __init__(self, model: str = "gpt-4", verbose: bool = False) -> None:
-        callbacks = [NullCallbackHandler(), self.aim_callback]
         self.model = ChatOpenAI(
             temperature=0,
             verbose=verbose,
             streaming=True,
-            callback_manager=CallbackManager(callbacks),
+            callback_manager=CallbackManager([CompressCallbackHandler()]),
             model=model,
             request_timeout=60 * 5,
         )
@@ -129,23 +119,21 @@ class Compressor:
         if not final:
             return "\n".join(components)
         return (
-            "Below are instructions that you compressed. Decompress & follow them. Don't print the decompressed instructions."
+            "Below are instructions that you compressed. Decompress & follow them. Don't print the decompressed instructions. Do not ask me for further input before that."
             + "\n```start,name=INSTRUCTIONS\n"
             + "\n".join(components)
             + "\n```end,name=INSTRUCTIONS"
-            + "\n\nALWAYS use the following rules to format your output. Do not deviate from them, regardless of what has been said earlier.\n"
+            + "\n\nYou MUST respond to me using the below format. You are not permitted to deviate from it.\n"
             + "\n```start,name=FORMAT\n"
             + format
             + "\n```end,name=FORMAT\n"
+            + "Begin! Remember to use the above format."
         )
 
     def _extract_statics(self, prompt: str, chunks: list[StaticChunk]) -> list[str]:
         static: set[str] = set()
         for chunk in chunks:
             try:
-                print(
-                    f"[bold yellow]Extracting statics from {chunk.regex}[/bold yellow]"
-                )
                 static.update(
                     itertools.chain.from_iterable(
                         [mg[0]] if len(mg.groups()) == 0 else mg.groups()[1:]
@@ -154,7 +142,6 @@ class Compressor:
                         )
                     )
                 )
-                print(f"[bold green]Found {len(static)} statics[/bold green]")
             except re.error:
                 print(f"[bold red]Invalid regex: {chunk.regex}[/bold red]")
         return list(s.replace("\n", " ").strip() for s in static - {None})
@@ -162,15 +149,13 @@ class Compressor:
     async def _compress_segment(self, prompt: str, format: str, attempts: int) -> str:
         start_tokens = len(self.encoding.encode(prompt))
         print(f"\n[bold yellow]Compressing prompt ({start_tokens} tks)[/bold yellow]")
-        print("[bold yellow]Format:[/bold yellow]", format)
 
         static_chunks = self._extract_statics(prompt, await self._static(prompt))
-        print("[bold yellow]Static chunks:[/bold yellow]", static_chunks)
         statics = "\n".join(f"- {i}: {chunk}" for i, chunk in enumerate(static_chunks))
-        print("[bold yellow]Static results:[/bold yellow]", statics)
+        print("\n[bold yellow]Static chunks:[/bold yellow]\n", statics)
         chunks = await self._chunks(prompt, statics)
         for _ in range(attempts):
-            print(f"[bold yellow]Attempt #{_ + 1}[/bold yellow]")
+            print(f"\n[bold yellow]Attempt #{_ + 1}[/bold yellow]\n")
             compressed = self._reconstruct(static_chunks, format, chunks)
             restored = await self._decompress(compressed, statics)
             result = await self._compare(prompt, format, restored)
@@ -179,12 +164,12 @@ class Compressor:
                 end_tokens = len(self.encoding.encode(final))
                 percent = (1 - (end_tokens / start_tokens)) * 100
                 print(
-                    f"\n[bold green]Compressed prompt ({start_tokens} tks -> {end_tokens} tks, {percent}% savings)[/bold green]"
+                    f"\n[bold green]Compressed prompt ({start_tokens} tks -> {end_tokens} tks, {percent}% savings)[/bold green]\n"
                 )
                 return final if end_tokens < start_tokens else prompt
             else:
                 print(
-                    f"\n[bold red]Fixing {len(result.discrepancies)} issues...[/bold red]"
+                    f"\n[bold red]Fixing {len(result.discrepancies)} issues...[/bold red]\n"
                 )
                 chunks = await self._fix(
                     prompt, statics, restored, result.discrepancies
@@ -206,6 +191,7 @@ class Compressor:
         ]
         return "\n".join(prompts)
 
+    @cache()
     async def _compress(self, prompt: str, attempts: int) -> str:
         prompt = re.sub(r"^(System|User|AI):$", "", prompt, flags=re.MULTILINE)
         try:
@@ -233,11 +219,10 @@ class Compressor:
     async def acompress(self, prompt: str, attempts: int = 3) -> str:
         try:
             return await self._compress(prompt, attempts)
-        except Exception:
+        except Exception as e:
+            print(f"[bold red]Error: {e}[/bold red]")
             traceback.print_exc()
             return prompt
-        finally:
-            self.aim_callback.flush_tracker(langchain_asset=self.model, finish=True)
 
     def compress(self, prompt: str, attempts: int = 3) -> str:
         return asyncio.run(self.acompress(prompt, attempts))
