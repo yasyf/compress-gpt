@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "compress-gpt"
+version = "0.1.0"
+description = ""
+authors = ["Yasyf Mohamedali <yasyfm@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "compress_gpt"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+langchain = "^0.0.132"
+openai = "^0.27.4"
+pydantic = "^1.10.7"
+dirtyjson = "^1.0.8"
+aiocache = "^0.12.0"
+hiredis = "^2.2.2"
+redis = "^4.5.4"
+dill = "^0.3.6"
+rich = "^13.3.3"
+tiktoken = "^0.3.3"
+spacy = "^3.5.1"
+en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl"}
+nest-asyncio = "^1.5.6"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest-asyncio = "^0.21.0"
+pytest = "^7.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
