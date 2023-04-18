@@ -6,6 +6,7 @@ import dirtyjson
 from langchain.chat_models import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, ValidationError, parse_obj_as, validator
+from rich import print
 
 from compress_gpt.utils import make_fast
 
@@ -51,6 +52,7 @@ class OutputParser(PydanticOutputParser, Generic[M]):
                 parsed = dirtyjson.loads(text, search_for_first_object=True)
                 return parse_obj_as(cast(M, self.format), parsed)
             except (dirtyjson.Error, ValidationError) as e:
+                print(f"[red]Error parsing output: {e}[/red]")
                 text = await self._fix(text, str(e))
 
         return super().parse(text)
