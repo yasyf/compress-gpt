@@ -42,7 +42,10 @@ class CompressCallbackHandler(BaseCallbackHandler):
         pass
 
     def on_llm_start(self, serialized, prompts, **kwargs):
-        print(f"\n[bold green]{prompts[0].splitlines()[1]}[/bold green]\n", flush=True)
+        print(
+            f"\n[bold green]{prompts[0].splitlines()[1].strip()}[/bold green]\n",
+            flush=True,
+        )
 
     def on_llm_end(self, response, **kwargs):
         pass

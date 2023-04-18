@@ -32,7 +32,8 @@ class ComparePrompts(Prompt[PromptComparison]):
             It is ok for the restored prompt to be more concise, as long as the output generated is similar.
             Differences in specificity that would generate a different result are discrepancies, and should be noted.
             Additional formatting instructions are provided. If these resolve a discrepancy, then do not include it.
-            Not all diffs imply discrepancies. Discrepancies MUST be specific and present an obvious solution.
+            Not all diffs imply discrepancies. Do not include diffs that are inconsequential to the task at hand, such as using abbreviations.
+            Use SPECIFIC wording for each discrepancy.
 
             Return your answer as a JSON object with the following schema:
             {{"discrepancies": [string], "equivalent": bool}}

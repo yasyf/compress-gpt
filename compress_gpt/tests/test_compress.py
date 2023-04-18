@@ -135,7 +135,7 @@ async def test_prompt(prompt: ChatPromptTemplate):
 async def test_output(complex_prompt: str, compressor: Compressor):
     await clear_cache()
 
-    print("[grey]Original Prompt[/grey]")
+    print("[grey bold]Original Prompt[/grey bold]")
     print(complex_prompt)
 
     messages = [
@@ -179,15 +179,15 @@ async def test_output(complex_prompt: str, compressor: Compressor):
         )
     )
 
-    print("[white]Compressed Prompt[/white]")
+    print("[white bold]Compressed Prompt[/white bold]")
 
     original = dirtyjson.loads(resp1, search_for_first_object=True)
     compressed = dirtyjson.loads(resp2, search_for_first_object=True)
 
-    print("[grey]Original Response[/grey]")
+    print("[grey bold]Original Response[/grey bold]")
     print(original)
 
-    print("[white]Compressed Response[/white]")
+    print("[white bold]Compressed Response[/white bold]")
     print(compressed)
 
     CORRECT = {

@@ -76,7 +76,7 @@ class Compressor:
         self, original: str, format: str, restored: str
     ) -> PromptComparison:
         analysis = await DiffPrompts.run(
-            original=original, restored=restored, model=self.fast_model
+            original=original, restored=restored, model=self.model
         )
         return await ComparePrompts.run(
             restored=restored, formatting=format, analysis=analysis, model=self.model
