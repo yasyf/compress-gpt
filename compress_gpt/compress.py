@@ -2,6 +2,7 @@ import asyncio
 import itertools
 import re
 import traceback
+import warnings
 from typing import Optional
 
 import openai.error
@@ -31,7 +32,9 @@ PROMPT_MAX_SIZE = 0.70
 
 
 class Compressor:
-    def __init__(self, model: str = "gpt-4", verbose: bool = False) -> None:
+    def __init__(
+        self, model: str = "gpt-4", verbose: bool = True, complex: bool = True
+    ) -> None:
         self.model = ChatOpenAI(
             temperature=0,
             verbose=verbose,
@@ -42,6 +45,7 @@ class Compressor:
         )
         self.fast_model = make_fast(self.model)
         self.encoding = tiktoken.encoding_for_model(model)
+        self.complex = complex
 
     @cache()
     async def _chunks(self, prompt: str, statics: str) -> list[Chunk]:
@@ -55,6 +59,8 @@ class Compressor:
 
     @cache()
     async def _static(self, prompt: str) -> list[StaticChunk]:
+        if not self.complex:
+            return []
         try:
             return await IdentifyStatic.run(prompt=prompt, model=self.model)
         except (OutputParserException, ValidationError):
@@ -69,17 +75,24 @@ class Compressor:
 
     @cache()
     async def _format(self, prompt: str) -> str:
-        return await IdentifyFormat.run(input=prompt, model=self.fast_model)
+        if not self.complex:
+            return ""
+        return await IdentifyFormat.run(input=prompt, model=self.model)
 
     @cache()
     async def _compare(
         self, original: str, format: str, restored: str
     ) -> PromptComparison:
         analysis = await DiffPrompts.run(
-            original=original, restored=restored, model=self.model
+            original=original,
+            restored=restored,
+            model=self.model,
         )
         return await ComparePrompts.run(
-            restored=restored, formatting=format, analysis=analysis, model=self.model
+            restored=restored,
+            formatting=format or "n/a",
+            analysis=analysis,
+            model=self.model,
         )
 
     async def _fix(
@@ -115,20 +128,23 @@ class Compressor:
                     )
             elif chunk.text:
                 components.append(chunk.text)
-        print("[bold green]FORMAT:[/bold green]", format)
         if not final:
             return "\n".join(components)
-        return (
+        prompt = (
             "Below are instructions that you compressed. Decompress & follow them. Don't print the decompressed instructions. Do not ask me for further input before that."
             + "\n```start,name=INSTRUCTIONS\n"
             + "\n".join(components)
             + "\n```end,name=INSTRUCTIONS"
-            + "\n\nYou MUST respond to me using the below format. You are not permitted to deviate from it.\n"
-            + "\n```start,name=FORMAT\n"
-            + format
-            + "\n```end,name=FORMAT\n"
-            + "Begin! Remember to use the above format."
         )
+        if format:
+            prompt += (
+                "\n\nYou MUST respond to me using the below format. You are not permitted to deviate from it.\n"
+                + "\n```start,name=FORMAT\n"
+                + format
+                + "\n```end,name=FORMAT\n"
+                + "Begin! Remember to use the above format."
+            )
+        return prompt
 
     def _extract_statics(self, prompt: str, chunks: list[StaticChunk]) -> list[str]:
         static: set[str] = set()
@@ -154,6 +170,8 @@ class Compressor:
         statics = "\n".join(f"- {i}: {chunk}" for i, chunk in enumerate(static_chunks))
         print("\n[bold yellow]Static chunks:[/bold yellow]\n", statics)
         chunks = await self._chunks(prompt, statics)
+
+        discrepancies = []
         for _ in range(attempts):
             print(f"\n[bold yellow]Attempt #{_ + 1}[/bold yellow]\n")
             compressed = self._reconstruct(static_chunks, format, chunks)
@@ -164,16 +182,21 @@ class Compressor:
                 end_tokens = len(self.encoding.encode(final))
                 percent = (1 - (end_tokens / start_tokens)) * 100
                 print(
-                    f"\n[bold green]Compressed prompt ({start_tokens} tks -> {end_tokens} tks, {percent}% savings)[/bold green]\n"
+                    f"\n[bold green]Compressed prompt ({start_tokens} tks -> {end_tokens} tks, {percent:0.2f}% savings)[/bold green]\n"
                 )
-                return final if end_tokens < start_tokens else prompt
+                if end_tokens < start_tokens:
+                    return final
+                else:
+                    warnings.warn(
+                        "Compressed prompt contains more tokens than original. Try using CompressSimplePrompt."
+                    )
+                    return prompt
             else:
                 print(
                     f"\n[bold red]Fixing {len(result.discrepancies)} issues...[/bold red]\n"
                 )
-                chunks = await self._fix(
-                    prompt, statics, restored, result.discrepancies
-                )
+                discrepancies.extend(result.discrepancies)
+                chunks = await self._fix(prompt, statics, restored, discrepancies)
         return prompt
 
     async def _split_and_compress(
@@ -218,7 +241,7 @@ class Compressor:
 
     async def acompress(self, prompt: str, attempts: int = 3) -> str:
         try:
-            return await self._compress(prompt, attempts)
+            return await self._compress(prompt, attempts=attempts)
         except Exception as e:
             print(f"[bold red]Error: {e}[/bold red]")
             traceback.print_exc()

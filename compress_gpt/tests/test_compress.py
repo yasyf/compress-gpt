@@ -12,6 +12,12 @@ from langchain.prompts import (
 from rich import print
 
 from compress_gpt import Compressor, clear_cache
+from compress_gpt.langchain import (
+    CompressPrompt,
+    CompressSimplePrompt,
+    CompressSimpleTemplate,
+    CompressTemplate,
+)
 
 
 @pytest.fixture
@@ -25,10 +31,10 @@ def simple_prompt():
         """
         System:
 
-        I want you to act as a drunk person.
-        You will only answer like a very drunk person texting and nothing else.
-        Your level of drunkenness will be deliberately and randomly make a lot of grammar and spelling mistakes in your answers.
-        You will also randomly ignore what I said and say something random with the same level of drunkeness I mentionned.
+        I want you to act as a {feeling} person.
+        You will only answer like a very {feeling} person texting and nothing else.
+        Your level of {feeling}enness will be deliberately and randomly make a lot of grammar and spelling mistakes in your answers.
+        You will also randomly ignore what I said and say something random with the same level of {feeling}eness I mentioned.
         Do not write explanations on replies. My first sentence is "how are you?"
         """
     )
@@ -100,6 +106,12 @@ def complex_prompt():
     )
 
 
+async def test_prompt(prompt: ChatPromptTemplate, **kwargs):
+    model = ChatOpenAI(temperature=0, verbose=True, model_name="gpt-4")
+    chain = LLMChain(llm=model, prompt=prompt)
+    return (await chain.acall(kwargs, return_only_outputs=True))[chain.output_key]
+
+
 @pytest.mark.asyncio
 async def test_compress(compressor: Compressor):
     chunks = await compressor._chunks("This is a test.")
@@ -118,26 +130,31 @@ async def test_compress_chunks(simple_prompt: str, compressor: Compressor):
 
 
 @pytest.mark.asyncio
+async def test_langchain_integration(simple_prompt: str):
+    PromptTemplate.from_template(simple_prompt)
+    CompressTemplate.from_template(simple_prompt)
+    CompressPrompt.from_template(simple_prompt)
+
+    for klass in [
+        PromptTemplate,
+        CompressTemplate,
+        CompressPrompt,
+        CompressSimplePrompt,
+        CompressSimpleTemplate,
+    ]:
+        await clear_cache()
+        prompt = klass.from_template(simple_prompt)
+        assert len(await test_prompt(prompt, feeling="drunk")) > 10
+
+
+@pytest.mark.asyncio
 async def test_complex(complex_prompt: str, compressor: Compressor):
     compressed = await compressor.acompress(complex_prompt)
     assert len(compressed) < len(complex_prompt)
 
 
-async def test_prompt(prompt: ChatPromptTemplate):
-    model = ChatOpenAI(temperature=0, verbose=True, model_name="gpt-4")
-    chain = LLMChain(llm=model, prompt=prompt)
-    return (await chain.acall({"stop": "Observation:"}, return_only_outputs=True))[
-        chain.output_key
-    ]
-
-
 @pytest.mark.asyncio
 async def test_output(complex_prompt: str, compressor: Compressor):
-    await clear_cache()
-
-    print("[grey bold]Original Prompt[/grey bold]")
-    print(complex_prompt)
-
     messages = [
         HumanMessagePromptTemplate.from_template("Alice: Hey, how's it going?"),
         HumanMessagePromptTemplate.from_template("Yasyf: Good, how are you?"),
@@ -160,7 +177,8 @@ async def test_output(complex_prompt: str, compressor: Compressor):
                 ),
                 *messages,
             ]
-        )
+        ),
+        stop="Observation:",
     )
 
     compressed = await compressor.acompress(complex_prompt)
@@ -176,18 +194,17 @@ async def test_output(complex_prompt: str, compressor: Compressor):
                 ),
                 *messages,
             ]
-        )
+        ),
+        stop="Observation:",
     )
-
-    print("[white bold]Compressed Prompt[/white bold]")
 
     original = dirtyjson.loads(resp1, search_for_first_object=True)
     compressed = dirtyjson.loads(resp2, search_for_first_object=True)
 
-    print("[grey bold]Original Response[/grey bold]")
+    print("[white bold]Original Response[/white bold]")
     print(original)
 
-    print("[white bold]Compressed Response[/white bold]")
+    print("[cyan bold]Compressed Response[/cyan bold]")
     print(compressed)
 
     CORRECT = {
