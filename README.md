@@ -3,10 +3,6 @@
 
 Check out the accompanying blog post [here]().
 
-### Demo
-
-[![asciicast](https://asciinema.org/a/578285.svg)](https://asciinema.org/a/578285)
-
 ### Installation
 
 ```shell
@@ -25,6 +21,11 @@ Simply change your existing imports of `langchain.PromptTemplate` to `compress_g
 For very simple prompts, use `CompressSimplePrompt` and `CompressSimpleTemplate` instead.
 
 If compression ever fails or results in extra tokens, the original prompt will be used. Each compression result is aggressively cached, but the first run can take a hot sec.
+
+### Demo
+
+[![asciicast](https://asciinema.org/a/578285.svg)](https://asciinema.org/a/578285)
+
 
 ### How CompressGPT Works
 
