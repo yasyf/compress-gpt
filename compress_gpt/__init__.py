@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import timedelta
 from functools import partial
@@ -37,8 +38,12 @@ else:
     )
 
 
-async def clear_cache():
+async def aclear_cache():
     await Cache(cache.keywords["cache"]).clear()
+
+
+def clear_cache():
+    asyncio.run(aclear_cache())
 
 
 from .compress import Compressor as Compressor

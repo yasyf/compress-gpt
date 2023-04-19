@@ -19,9 +19,8 @@ redis = "^4.5.4"
 dill = "^0.3.6"
 rich = "^13.3.3"
 tiktoken = "^0.3.3"
-spacy = "^3.5.1"
-en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl" }
 nest-asyncio = "^1.5.6"
+nltk = "^3.8.1"
 
 
 [tool.poetry.group.dev.dependencies]

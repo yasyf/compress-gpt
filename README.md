@@ -22,6 +22,14 @@ For very simple prompts, use `CompressSimplePrompt` and `CompressSimpleTemplate`
 
 If compression ever fails or results in extra tokens, the original prompt will be used. Each compression result is aggressively cached, but the first run can take a hot sec.
 
+#### Clearing the cache
+
+```python
+import compress_gpt
+
+compress_gpt.clear_cache()
+```
+
 ### Demo
 
 [![asciicast](https://asciinema.org/a/578285.svg)](https://asciinema.org/a/578285)
