@@ -16,6 +16,7 @@ from compress_gpt.utils import has_redis
 nest_asyncio.apply()
 
 CACHE_DIR = Path(os.getenv("XDG_CACHE_HOME", "~/.cache")).expanduser() / "compress-gpt"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 if has_redis():
     langchain.llm_cache = RedisCache(redis_=Redis())
