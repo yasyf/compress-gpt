@@ -1,7 +1,7 @@
 # CompressGPT
 ## Self-extracting GPT prompts for ~70% token savings
 
-Check out the accompanying blog post [here]().
+Check out the accompanying blog post [here](https://musings.yasyf.com/compressgpt-decrease-token-usage-by-70/).
 
 ### Installation
 
@@ -37,6 +37,6 @@ compress_gpt.clear_cache()
 
 ### How CompressGPT Works
 
-My [blog post]() helps explain the below image.
+My [blog post](https://musings.yasyf.com/compressgpt-decrease-token-usage-by-70/) helps explain the below image.
 
 ![CompressGPT Pipeline](assets/pipeline.svg)
