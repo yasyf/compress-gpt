@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "compress-gpt"
-version = "0.1.1"
+version = "0.1.2"
 description = "Self-extracting GPT prompts for ~70% token savings."
 authors = ["Yasyf Mohamedali <yasyfm@gmail.com>"]
 license = "MIT"
